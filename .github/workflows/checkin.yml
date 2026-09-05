@@ -42,7 +42,7 @@ jobs:
           NOTIFY_KEY: ${{ secrets.NOTIFY_KEY }}
         run: |
           if [ -n "${NOTIFY_KEY:-}" ]; then
-            summary=$(echo "$RESULT" | tail -n 3 | tr '\n' ' ' | cut -c1-200)
+            summary=$(echo "$RESULT" | sed 's/^\[[^]]*\] //' | tail -n 3 | tr '\n' ' ' | cut -c1-200)
             curl -s -X POST "https://grok200.de5.net/notify" \
               -H "Content-Type: application/json" \
               -d "{\"key\":\"${NOTIFY_KEY}\",\"title\":\"Hyperdown 每日签到\",\"content\":\"${summary}\"}" \
