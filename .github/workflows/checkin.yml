@@ -1,10 +1,9 @@
-# Hyperdown 每日自动签到。保活见 keepalive.yml。
+# Hyperdown 每日自动签到（含 QQ 推送回调）
 name: Hyperdown Check-in
 
 on:
   workflow_dispatch:
   schedule:
-    # UTC 00:05 ≈ 北京 08:05
     - cron: "5 16 * * *"
 
 permissions:
@@ -15,22 +14,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
           cache: pip
-
       - run: pip install -r requirements.txt
 
       - name: Run check-in
+        id: checkin
         env:
           HYPERDOWN_EMAIL: ${{ secrets.HYPERDOWN_EMAIL }}
           HYPERDOWN_PASSWORD: ${{ secrets.HYPERDOWN_PASSWORD }}
         run: |
           set -euo pipefail
           if [ -z "${HYPERDOWN_EMAIL:-}" ] || [ -z "${HYPERDOWN_PASSWORD:-}" ]; then
-            echo "::error::缺少 Secrets：请配置 HYPERDOWN_EMAIL 与 HYPERDOWN_PASSWORD"
+            echo "::error::缺少 Secrets，需要配置 HYPERDOWN_EMAIL 和 HYPERDOWN_PASSWORD"
             exit 1
           fi
-          python checkin.py
+          output=$(python checkin.py 2>&1 || true)
+          echo "$output"
+          echo "RESULT<<EOF" >> "$GITHUB_ENV"
+          echo "$output" >> "$GITHUB_ENV"
+          echo "EOF" >> "$GITHUB_ENV"
+
+      - name: Push to QQ bot
+        env:
+          NOTIFY_KEY: ${{ secrets.NOTIFY_KEY }}
+        run: |
+          if [ -n "${NOTIFY_KEY:-}" ]; then
+            summary=$(echo "$RESULT" | tail -n 3 | tr '\n' ' ' | cut -c1-200)
+            curl -s -X POST "https://grok200.de5.net/notify" \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"${NOTIFY_KEY}\",\"title\":\"Hyperdown 每日签到\",\"content\":\"${summary}\"}" \
+              || echo "推送失败（不影响签到）"
+          fi
