@@ -42,8 +42,16 @@ jobs:
           NOTIFY_KEY: ${{ secrets.NOTIFY_KEY }}
         run: |
           if [ -n "${NOTIFY_KEY:-}" ]; then
-            line=$(echo "$RESULT" | grep '今日已签到' | tail -1)
-            content=$(echo "$line" | sed -E 's/^\[([0-9-]+) [0-9:]+\]/「\1」/' | sed 's/。/\n/g' | sed 's/，/\n/g')
+            log=$(echo "$RESULT")
+            date_str=$(echo "$log" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1)
+            ok_line=$(echo "$log" | grep '本次奖励' | tail -1)
+            total_line=$(echo "$log" | grep '累计签到' | tail -1)
+            gain=$(echo "$ok_line" | grep -oE '奖励 [0-9.]+ GB')
+            bal=$(echo "$ok_line" | grep -oE '余额 [0-9.]+ GB')
+            total=$(echo "$total_line" | grep -oE '累计签到[^ ]* [0-9.]+ GB')
+            content="「${date_str}」签到成功！
+今日${gain}流量
+当前${bal}，${total}"
             curl -s -X POST "https://grok200.de5.net/notify" \
               -H "Content-Type: application/json" \
               -d "$(python3 -c "import json,sys; print(json.dumps({'key': sys.argv[1], 'title': 'Hyperdown 每日签到', 'content': sys.argv[2]}))" "$NOTIFY_KEY" "$content")" \
