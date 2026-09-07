@@ -49,9 +49,7 @@ jobs:
             gain=$(echo "$ok_line" | grep -oE '奖励 [0-9.]+ GB')
             bal=$(echo "$ok_line" | grep -oE '余额 [0-9.]+ GB')
             total=$(echo "$total_line" | grep -oE '累计签到[^ ]* [0-9.]+ GB')
-            content="「${date_str}」签到成功！
-今日${gain}流量
-当前${bal}，${total}"
+            content="「${date_str}」签到成功！今日${gain}流量，${bal}${total}"
             curl -s -X POST "https://grok200.de5.net/notify" \
               -H "Content-Type: application/json" \
               -d "$(python3 -c "import json,sys; print(json.dumps({'key': sys.argv[1], 'title': 'Hyperdown 每日签到', 'content': sys.argv[2]}))" "$NOTIFY_KEY" "$content")" \
